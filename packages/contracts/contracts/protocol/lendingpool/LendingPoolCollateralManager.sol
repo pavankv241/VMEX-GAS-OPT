@@ -106,6 +106,12 @@ contract LendingPoolCollateralManager is
         vars._assetMappings = _assetMappings;
         vars.debtAsset = debtAsset;
         vars.collateralAsset = collateralAsset;
+               /* DataTypes.ReserveData storage collateralReserve = _reserves[  //Gas savings
+            vars.collateralAsset
+        ][trancheId];
+         DataTypes.ReserveData storage debtReserve = _reserves[vars.debtAsset][  //Gas savings .
+            trancheId
+        ]; */
 
 
         (, , , , vars.healthFactor,) = GenericLogic.calculateUserAccountData(
@@ -206,7 +212,7 @@ contract LendingPoolCollateralManager is
             );
         } else {
             // If the user doesn't have variable debt, no need to try to burn variable debt tokens
-            if (vars.userVariableDebt > 0) {
+            if (vars.userVariableDebt != 0) { ///Gas savings.
                 IVariableDebtToken(debtReserve.variableDebtTokenAddress).burn(
                     user,
                     vars.userVariableDebt,

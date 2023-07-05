@@ -122,10 +122,11 @@ library ReserveConfiguration {
         // user set reserve factor <= our reserve factor to prevent tranche admins rugging users
         // also make sure it doesn't exceed the max number of bits allocated
         require(
-            reserveFactor <= MAX_VALID_RESERVE_FACTOR &&
-            reserveFactor <= a.getVMEXReserveFactor(asset),
-            Errors.RC_INVALID_RESERVE_FACTOR
+            reserveFactor <= MAX_VALID_RESERVE_FACTOR ,
+             Errors.RC_INVALID_RESERVE_FACTOR
         );
+
+        require(reserveFactor <= a.getVMEXReserveFactor(asset),Errors.RC_INVALID_RESERVE_FACTOR); //Gas savings
 
         self.data =
             (self.data & RESERVE_FACTOR_MASK) |

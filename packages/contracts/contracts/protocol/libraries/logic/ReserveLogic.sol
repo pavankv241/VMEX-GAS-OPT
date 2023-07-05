@@ -290,8 +290,10 @@ library ReserveLogic {
         vars.reserveFactor = reserve.configuration.getReserveFactor();
         vars.globalVMEXReserveFactor = vmexReserveFactor;
 
-        if (vars.reserveFactor == 0 && vars.globalVMEXReserveFactor == 0) {
-            return;
+        if (vars.reserveFactor == 0) {
+            if(vars.globalVMEXReserveFactor == 0){  //Gas savings.
+             return;
+            }
         }
 
         //calculate the last principal variable debt
@@ -366,7 +368,7 @@ library ReserveLogic {
         uint256 newVariableBorrowIndex = variableBorrowIndex;
 
         // only cumulating if there is any income being produced
-        if (currentLiquidityRate > 0) {
+        if (currentLiquidityRate != 0) {
             uint256 cumulatedLiquidityInterest = MathUtils
                 .calculateLinearInterest(currentLiquidityRate, timestamp);
             newLiquidityIndex = cumulatedLiquidityInterest.rayMul(

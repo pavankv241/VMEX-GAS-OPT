@@ -14,7 +14,7 @@ import {ValidationLogic} from "./ValidationLogic.sol";
 import {IAToken} from "../../../interfaces/IAToken.sol";
 import {IVariableDebtToken} from "../../../interfaces/IVariableDebtToken.sol";
 import {ILendingPoolAddressesProvider} from "../../../interfaces/ILendingPoolAddressesProvider.sol";
-import {GenericLogic} from "./GenericLogic.sol";
+import {GenericLogic} from "./GenericLogic.sol"; //Gas savings unsed import can remove
 import {IAssetMappings} from "../../../interfaces/IAssetMappings.sol";
 /**
  * @title DepositWithdrawLogic library
@@ -56,9 +56,9 @@ library DepositWithdrawLogic {
         }
         address aToken = self.aTokenAddress;
 
-        self.updateState(vars._assetMappings.getVMEXReserveFactor(vars.asset));
+        self.updateState(vars._assetMappings.getVMEXReserveFactor(vars.asset));  //Update state .
 
-        ValidationLogic.validateDeposit(vars.asset, self, vars.amount, vars._assetMappings);
+        ValidationLogic.validateDeposit(vars.asset, self, vars.amount, vars._assetMappings);  // validate deposit
 
         self.updateInterestRates(
             vars.asset,
@@ -78,9 +78,11 @@ library DepositWithdrawLogic {
 
         // require the sender to be the same as onBehalfOf in order to turn collateral on
         // Response to yAudit vulnerability where attacker can deposit dust to victim to increase gas fees of a victim
-        if (isFirstDeposit && vars.onBehalfOf == msg.sender) {
-            // if collateral is enabled, by default the user's deposit is marked as collateral
-            user.setUsingAsCollateral(self.id, self.configuration.getCollateralEnabled(vars.asset, vars._assetMappings));
+        if (isFirstDeposit  ) { //Gas savings
+             if(vars.onBehalfOf == msg.sender){ //Gas savings
+             // if collateral is enabled, by default the user's deposit is marked as collateral
+             user.setUsingAsCollateral(self.id, self.configuration.getCollateralEnabled(vars.asset, vars._assetMappings));
+             }
         }
         return vars.amount;
     }
@@ -118,7 +120,7 @@ library DepositWithdrawLogic {
             vars.amount = userBalance;
         }
 
-        reserve.updateState(_assetMappings.getVMEXReserveFactor(vars.asset));
+        reserve.updateState(_assetMappings.getVMEXReserveFactor(vars.asset)); //update state
 
         ValidationLogic.validateWithdraw(
             vars.asset,
@@ -159,13 +161,13 @@ library DepositWithdrawLogic {
         mapping(uint256 => address) storage _reservesList,
         DataTypes.UserConfigurationMap storage userConfig, //config of onBehalfOf user
         ILendingPoolAddressesProvider _addressesProvider,
-        DataTypes.ExecuteBorrowParams memory vars
+        DataTypes.ExecuteBorrowParams memory vars  //Execute borrows.
     ) external returns(uint256){
         DataTypes.ReserveData storage reserve = _reserves[vars.asset][vars.trancheId];
 
-        reserve.updateState(vars._assetMappings.getVMEXReserveFactor(vars.asset));
+        reserve.updateState(vars._assetMappings.getVMEXReserveFactor(vars.asset));  //update state
 
-        vars.amount = ValidationLogic.validateBorrow(
+        vars.amount = ValidationLogic.validateBorrow(   
             vars,
             reserve,
             _reserves,
@@ -175,7 +177,7 @@ library DepositWithdrawLogic {
             _addressesProvider
         );
 
-        bool isFirstBorrowing = IVariableDebtToken(
+        bool isFirstBorrowing = IVariableDebtToken(     //Mint
             reserve.variableDebtTokenAddress
         ).mint(
             vars.user, //msg.sender is the delegatee
@@ -188,7 +190,7 @@ library DepositWithdrawLogic {
             userConfig.setBorrowing(reserve.id, true);
         }
 
-        reserve.updateInterestRates(
+        reserve.updateInterestRates(                            //Update interest rate
             vars.asset,
             vars.trancheId,
             0,

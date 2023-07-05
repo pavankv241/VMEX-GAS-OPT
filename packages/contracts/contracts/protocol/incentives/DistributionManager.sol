@@ -23,7 +23,7 @@ contract DistributionManager is IDistributionManager {
 
   address public immutable EMISSION_MANAGER;
 
-  constructor(address emissionManager) {
+  constructor(address emissionManager) payable { //Gas savings.
     EMISSION_MANAGER = emissionManager;
   }
 
@@ -103,7 +103,7 @@ contract DistributionManager is IDistributionManager {
     if (userIndex != reward.index) {
       if (balance != 0) {
         accrued = _getReward(balance, reward.index, userIndex, decimals);
-        reward.users[user].accrued += accrued;
+        reward.users[user].accrued = reward.users[user].accrued + accrued;  //Gas savings
       }
       reward.users[user].index = reward.index;
       updated = true;
@@ -124,7 +124,7 @@ contract DistributionManager is IDistributionManager {
     assert(userBalance <= assetSupply); // will catch cases such as if userBalance and assetSupply were flipped
     DistributionTypes.IncentivizedAsset storage incentivizedAsset = _incentivizedAssets[asset];
 
-    for (uint128 i = 0; i < incentivizedAsset.numRewards; i++) {
+    for (uint128 i = 0; i < incentivizedAsset.numRewards; ++i) { //Gas savings
       address rewardAddress = incentivizedAsset.rewardList[i];
 
       DistributionTypes.Reward storage reward = incentivizedAsset.rewardData[rewardAddress];
@@ -154,7 +154,7 @@ contract DistributionManager is IDistributionManager {
     address user,
     DistributionTypes.UserAssetState[] memory userAssets
   ) internal {
-    for (uint256 i = 0; i < userAssets.length; i++) {
+    for (uint256 i = 0; i < userAssets.length; ++i) { //Gas savings
       _updateIncentivizedAsset(
         userAssets[i].asset,
         user,
@@ -256,9 +256,10 @@ contract DistributionManager is IDistributionManager {
   function getAccruedRewards(
     address user,
     address reward
-  ) external view override returns (uint256) {
-    uint256 total;
-    for (uint256 i = 0; i < _allIncentivizedAssets.length; i++) {
+  ) external view override returns (uint256 total) {  //Gas savings.
+
+    uint256 Local_allIncentivizedAssets =  _allIncentivizedAssets.length ; //Gas savings
+    for (uint256 i = 0; i < Local_allIncentivizedAssets; ++i) {   // Gas savings.
       total += _incentivizedAssets[_allIncentivizedAssets[i]]
         .rewardData[reward]
         .users[user]

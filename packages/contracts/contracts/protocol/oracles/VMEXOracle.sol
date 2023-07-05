@@ -8,7 +8,7 @@ import {IPriceOracleGetter} from "../../interfaces/IPriceOracleGetter.sol";
 import {IChainlinkPriceFeed} from "../../interfaces/IChainlinkPriceFeed.sol";
 import {IChainlinkAggregator} from "../../interfaces/IChainlinkAggregator.sol";
 import {SafeERC20} from "../../dependencies/openzeppelin/contracts/SafeERC20.sol";
-import {IERC20Detailed} from "../../dependencies/openzeppelin/contracts/IERC20Detailed.sol";
+import {IERC20Detailed} from "../../dependencies/openzeppelin/contracts/IERC20Detailed.sol";  //Gas savings unsed import
 import {Initializable} from "../../dependencies/openzeppelin/upgradeability/Initializable.sol";
 import {IAssetMappings} from "../../interfaces/IAssetMappings.sol";
 import {DataTypes} from "../libraries/types/DataTypes.sol";
@@ -87,7 +87,7 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
         address baseCurrency,
         uint256 baseCurrencyUnit,
         string calldata baseCurrencyString
-    ) external onlyGlobalAdmin {
+    ) external onlyGlobalAdmin { //Gas savings
         require(BASE_CURRENCY == address(0), Errors.VO_BASE_CURRENCY_SET_ONLY_ONCE);
         BASE_CURRENCY = baseCurrency;
         BASE_CURRENCY_UNIT = baseCurrencyUnit;
@@ -102,12 +102,16 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
     function setAssetSources(
         address[] calldata assets,
         ChainlinkData[] calldata sources
-    ) external onlyGlobalAdmin {
+    ) external onlyGlobalAdmin { //Gas savings
         require(assets.length == sources.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for (uint256 i = 0; i < assets.length; i++) {
+        uint assetsLength = assets.length;   //Gas savings
+        for (uint256 i = 0; i < assetsLength;) { //Gas savings
             require(Helpers.compareSuffix(IChainlinkPriceFeed(sources[i].feed).description(), BASE_CURRENCY_STRING), Errors.VO_BAD_DENOMINATION);
             _assetsSources[assets[i]] = sources[i];
             emit AssetSourceUpdated(assets[i], address(sources[i].feed));
+            unchecked {  //Gas savings.
+				++i;
+			}
         }
     }
 
@@ -115,21 +119,21 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
      * @dev Sets the fallback oracle. Callable only by the VMEX governance
      * @param fallbackOracle The address of the fallbackOracle
      **/
-    function setFallbackOracle(address fallbackOracle) external onlyGlobalAdmin {
+    function setFallbackOracle(address fallbackOracle) external onlyGlobalAdmin { //Gas savings
         _fallbackOracle = IPriceOracleGetter(fallbackOracle);
         emit FallbackOracleUpdated(fallbackOracle);
     }
 
     function setWETH(
         address weth
-    ) external onlyGlobalAdmin {
+    ) external onlyGlobalAdmin {  // Gas savings
         require(WETH == address(0), Errors.VO_WETH_SET_ONLY_ONCE);
         WETH = weth;
     }
 
     function setRETHOracle(
         address _rETHOracle
-    ) external onlyGlobalAdmin {
+    ) external onlyGlobalAdmin { // Gas savings
         rETHOracle = IRocketPriceOracle(_rETHOracle);
     }
 
@@ -137,7 +141,7 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
      * @dev Sets the sequencerUptimeFeed. Callable only by the VMEX governance
      * @param sequencerUptimeFeed The address of the sequencerUptimeFeed
      **/
-    function setSequencerUptimeFeed(uint256 chainId, address sequencerUptimeFeed) external onlyGlobalAdmin {
+    function setSequencerUptimeFeed(uint256 chainId, address sequencerUptimeFeed) external onlyGlobalAdmin { // Gas savings
         sequencerUptimeFeeds[chainId] = AggregatorV3Interface(sequencerUptimeFeed);
         emit SequencerUptimeFeedUpdated(chainId, sequencerUptimeFeed);
     }
@@ -240,6 +244,9 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
         }
     }
 
+
+    
+
     /**
      * @dev Gets an asset price for an asset with a chainlink aggregator
      * @param asset The asset address
@@ -256,13 +263,13 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
 
         uint256[] memory prices = new uint256[](c._poolSize);
 
-        for (uint256 i = 0; i < c._poolSize; i++) {
+        for (uint256 i = 0; i < c._poolSize; ++i) { //Gas savings
             address underlying = ICurvePool(c._curvePool).coins(i);
             if(underlying == ETH_NATIVE){
                 underlying = WETH;
             }
             prices[i] = getAssetPrice(underlying); //handles case where underlying is curve too.
-            require(prices[i] > 0, Errors.VO_UNDERLYING_FAIL);
+            require(prices[i] != 0, Errors.VO_UNDERLYING_FAIL); //Gas savings.
         }
 
         if(assetType==DataTypes.ReserveAssetType.CURVE){
@@ -293,13 +300,13 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
             token0 = WETH;
         }
         prices[0] = getAssetPrice(token0); //handles case where underlying is curve too.
-        require(prices[0] > 0, Errors.VO_UNDERLYING_FAIL);
+        require(prices[0] != 0, Errors.VO_UNDERLYING_FAIL); //Gas savings
 
         if(token1 == ETH_NATIVE){
             token1 = WETH;
         }
         prices[1] = getAssetPrice(token1); //handles case where underlying is curve too.
-        require(prices[1] > 0, Errors.VO_UNDERLYING_FAIL);
+        require(prices[1] != 0, Errors.VO_UNDERLYING_FAIL); //Gas savings
 
         price = VelodromeOracle.get_lp_price(asset, prices);
         if(price == 0){
@@ -341,9 +348,9 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
                 token = WETH;
             }
             prices[j] = getAssetPrice(token);
-            require(prices[j] > 0, Errors.VO_UNDERLYING_FAIL);
-            i++;
-            j++;
+            require(prices[j] != 0, Errors.VO_UNDERLYING_FAIL); //Gas savings
+            ++i; //Gas savings
+            ++j; //Gas savings
         }
 
         DataTypes.BeethovenMetadata memory md = _assetMappings.getBeethovenMetadata(asset);
@@ -365,7 +372,7 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
      * @dev Gets an asset price for a yearn token
      * @param asset The asset address
      **/
-    function getYearnPrice(address asset) internal returns (uint256){
+    function getYearnPrice(address asset) internal returns (uint256){ //Gas savings
         IYearnToken yearnVault = IYearnToken(asset);
         uint256 underlyingPrice = getAssetPrice(yearnVault.token()); //getAssetPrice() will always have 18 decimals for Aave and Curve tokens (prices in eth), or 8 decimals if prices in USD
         //note: pricePerShare has decimals equal to underlying tokens (ex: yvUSDC has 6 decimals). By dividing by 10**yearnVault.decimals(), we keep the decimals of underlyingPrice which is 18 decimals for eth base, 8 for usd base.
@@ -380,7 +387,7 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
      * @dev Gets an asset price for a beefy token
      * @param asset The asset address
      **/
-	function getBeefyPrice(address asset) internal returns (uint256) {
+	function getBeefyPrice(address asset) internal returns (uint256) { //Gas savings
         IBeefyVault beefyVault = IBeefyVault(asset);
         uint256 underlyingPrice = getAssetPrice(beefyVault.want());
         uint256 price = beefyVault.getPricePerFullShare()*underlyingPrice / 10**beefyVault.decimals();
@@ -407,7 +414,7 @@ contract VMEXOracle is Initializable, IPriceOracleGetter {
     /// @param assets The list of assets addresses
     function getAssetsPrices(address[] calldata assets)
         external
-        returns (uint256[] memory)
+        returns (uint256[] memory) //Gas savings
     {
         uint256[] memory prices = new uint256[](assets.length);
         for (uint256 i = 0; i < assets.length; i++) {

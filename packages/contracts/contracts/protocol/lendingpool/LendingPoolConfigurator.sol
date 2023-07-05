@@ -108,10 +108,10 @@ contract LendingPoolConfigurator is
     function claimTrancheId(
         string calldata name,
         address admin
-    ) external whitelistedAddress returns (uint256 trancheId) {
+    ) external payable whitelistedAddress returns (uint256 trancheId) {
         uint64 givenTranche = totalTranches;
         addressesProvider.addTrancheAdmin(admin, givenTranche);
-        totalTranches += 1;
+        totalTranches = totalTranches + 1;  //Gas savings
         emit TrancheInitialized(givenTranche, name, admin);
         return givenTranche;
     }
@@ -129,7 +129,7 @@ contract LendingPoolConfigurator is
     function changeTrancheName(
         uint64 trancheId,
         string calldata name
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         emit TrancheNameChanged(trancheId, name);
     }
 
@@ -142,15 +142,17 @@ contract LendingPoolConfigurator is
     function batchInitReserve(
         InitReserveInput[] calldata input,
         uint64 trancheId
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         ILendingPool cachedPool = pool;
-        for (uint256 i = 0; i < input.length; i++) {
+        uint  InputLen  = input.length;  //Gas savings.
+        for (uint256 i = 0; i < InputLen;) {  //Gas savings.
             _initReserve(
                 input[i],
                 trancheId,
                 assetMappings.getAssetMapping(input[i].underlyingAsset),
                 cachedPool
             );
+           unchecked { ++i; }  //Gas savings
         }
     }
 
@@ -160,6 +162,11 @@ contract LendingPoolConfigurator is
         DataTypes.AssetData memory assetdata,
         ILendingPool cachedPool
     ) internal {
+        DataTypes.ReserveConfigurationMap memory currentConfig = cachedPool      //Gas savings.
+            .getConfiguration(
+                input.underlyingAsset,
+                trancheId
+            ); 
         address aTokenProxyAddress = _initTokenWithProxy(
             addressesProvider.getATokenBeacon(),
             abi.encodeCall(
@@ -197,11 +204,15 @@ contract LendingPoolConfigurator is
             variableDebtTokenProxyAddress
         );
 
-        DataTypes.ReserveConfigurationMap memory currentConfig = cachedPool
+       /* DataTypes.ReserveConfigurationMap memory currentConfig = cachedPool  //Gas savings
             .getConfiguration(
                 input.underlyingAsset,
                 trancheId
-            );
+            ); */
+
+
+             //Gas savings below .
+            /*
         if (assetdata.liquidationThreshold != 0) {
             // asset mappings does not force disable borrow, so the user's choice matters
             currentConfig.setCollateralEnabled(input.canBeCollateral);
@@ -218,6 +229,16 @@ contract LendingPoolConfigurator is
             // otherwise force to be disabled
             currentConfig.setBorrowingEnabled(false);
         }
+        */
+
+             //Gas savings.
+        (assetdata.liquidationThreshold != 0) ?  currentConfig.setCollateralEnabled(input.canBeCollateral):
+         currentConfig.setCollateralEnabled(false);
+
+         (assetdata.borrowingEnabled) ?  currentConfig.setBorrowingEnabled(input.canBorrow):
+         currentConfig.setBorrowingEnabled(false);
+
+
 
         uint256 percentReserveFactor = uint256(input.reserveFactor).convertToPercent();
 
@@ -231,6 +252,7 @@ contract LendingPoolConfigurator is
             trancheId,
             currentConfig.data
         );
+         
 
         emit ReserveInitialized(
             input.underlyingAsset,
@@ -252,7 +274,7 @@ contract LendingPoolConfigurator is
     function updateTreasuryAddress(
         address newAddress,
         uint64 trancheId
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         require(newAddress!=address(0), Errors.LPC_TREASURY_ADDRESS_ZERO);
         trancheAdminTreasuryAddresses[trancheId] = newAddress;
         emit UpdatedTreasuryAddress(trancheId, newAddress);
@@ -269,9 +291,10 @@ contract LendingPoolConfigurator is
         address[] calldata asset,
         uint64 trancheId,
         bool[] calldata borrowingEnabled
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         require(asset.length == borrowingEnabled.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for(uint i = 0; i<asset.length;i++){
+        uint assetLength = asset.length; //Gas savings
+        for(uint i = 0; i<assetLength;){ //Gas savings
             require(!borrowingEnabled[i] || assetMappings.getAssetBorrowable(asset[i]), Errors.LPC_NOT_APPROVED_BORROWABLE);
             DataTypes.ReserveConfigurationMap memory currentConfig = pool
                 .getConfiguration(asset[i], trancheId);
@@ -282,6 +305,7 @@ contract LendingPoolConfigurator is
             pool.setConfiguration(asset[i], trancheId, currentConfig.data);
 
             emit BorrowingSetOnReserve(asset[i], trancheId, borrowingEnabled[i]);
+            unchecked { ++i; }  //Gas savings
         }
     }
 
@@ -295,9 +319,10 @@ contract LendingPoolConfigurator is
         address[] calldata asset,
         uint64 trancheId,
         bool[] calldata collateralEnabled
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         require(asset.length == collateralEnabled.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for(uint i = 0; i<asset.length;i++){
+        uint assetLength = asset.length;  //Gas savings.
+        for(uint i = 0; i<assetLength;){  //Gas savings.
             if(!collateralEnabled[i]){
                 _checkNoLiquidity(asset[i], trancheId);
             }
@@ -309,6 +334,7 @@ contract LendingPoolConfigurator is
 
             pool.setConfiguration(asset[i], trancheId, currentConfig.data);
             emit CollateralSetOnReserve(asset[i], trancheId, collateralEnabled[i]);
+            unchecked { ++i; }  //Gas savings
         }
     }
 
@@ -322,9 +348,10 @@ contract LendingPoolConfigurator is
         address[] calldata asset,
         uint64 trancheId,
         uint256[] calldata reserveFactor
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         require(asset.length == reserveFactor.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for(uint i = 0; i<asset.length;i++){
+        uint assetLength = asset.length; //Gas savings.
+        for(uint i = 0; i<assetLength;){ //Gas savings.
             //reserve factor can only be changed if no one deposited in it, otherwise tranche admins could "rug pull" the interest earnings in there
             _checkNoLiquidity(asset[i], trancheId);
             DataTypes.ReserveConfigurationMap memory currentConfig = ILendingPool(
@@ -341,6 +368,7 @@ contract LendingPoolConfigurator is
             );
 
             emit ReserveFactorChanged(asset[i], trancheId, thisReserveFactor);
+            unchecked { ++i; }  //Gas savings
         }
     }
 
@@ -353,10 +381,12 @@ contract LendingPoolConfigurator is
      **/
     function setFreezeReserve(address[] calldata asset, uint64 trancheId, bool[] calldata isFrozen)
         external
+        payable
         onlyTrancheAdmin(trancheId)
     {
         require(asset.length == isFrozen.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for(uint i = 0; i<asset.length;i++){
+        uint assetLength = asset.length;  //Gas savings
+        for(uint i = 0; i<assetLength;){ //Gas savings
             DataTypes.ReserveConfigurationMap memory currentConfig = ILendingPool(
                 pool
             ).getConfiguration(asset[i], trancheId);
@@ -370,6 +400,7 @@ contract LendingPoolConfigurator is
             );
 
             emit ReserveFrozenChanged(asset[i], trancheId, isFrozen[i]);
+           unchecked { ++i; }  //Gas savings
         }
     }
 
@@ -381,7 +412,7 @@ contract LendingPoolConfigurator is
     function setTrancheWhitelistEnabled(
         uint64 trancheId,
         bool isUsingWhitelist
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         if(isUsingWhitelist) { //only allow tranche admins to set whitelist enabled if reserves have not yet been initialized
             require(pool.getTrancheParams(trancheId).reservesCount == 0, Errors.LPC_WHITELISTING_NOT_ALLOWED);
         }
@@ -399,11 +430,13 @@ contract LendingPoolConfigurator is
         uint64 trancheId,
         address[] calldata user,
         bool[] calldata isWhitelisted
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         require(user.length == isWhitelisted.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for(uint i = 0;i<user.length;i++) {
+        uint userLength = user.length;  //Gas savings.
+        for(uint i = 0;i<userLength;) { //Gas savings.
             pool.addToWhitelist(trancheId, user[i], isWhitelisted[i]);
             emit UserChangedWhitelist(trancheId, user[i], isWhitelisted[i]);
+            unchecked { ++i; }  //Gas savings
         }
     }
 
@@ -418,11 +451,12 @@ contract LendingPoolConfigurator is
         uint64 trancheId,
         address[] calldata user,
         bool[] calldata isBlacklisted
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         require(user.length == isBlacklisted.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for(uint i = 0;i<user.length;i++) {
+        for(uint i = 0;i<user.length;) {
             pool.addToBlacklist(trancheId, user[i], isBlacklisted[i]);
             emit UserChangedBlacklist(trancheId, user[i], isBlacklisted[i]);
+            unchecked { ++i; }  //Gas savings
         }
     }
 
@@ -436,7 +470,7 @@ contract LendingPoolConfigurator is
         address asset,
         uint64 trancheId,
         uint8 rateStrategyAddressId
-    ) external onlyTrancheAdmin(trancheId) {
+    ) external payable onlyTrancheAdmin(trancheId) {
         //interest rate can only be changed if no one deposited in it, otherwise tranche admins could potentially trick users
         _checkNoLiquidity(asset, trancheId);
         address rateStrategyAddress = assetMappings.getInterestRateStrategyAddress(asset, rateStrategyAddressId);
@@ -459,6 +493,7 @@ contract LendingPoolConfigurator is
      **/
     function activateReserve(address asset, uint64 trancheId)
         external
+        payable
         onlyGlobalAdmin
     {
         DataTypes.ReserveConfigurationMap memory currentConfig = pool
@@ -478,6 +513,7 @@ contract LendingPoolConfigurator is
      **/
     function deactivateReserve(address asset, uint64 trancheId)
         external
+        payable
         onlyGlobalAdmin
     {
         _checkNoLiquidity(asset, trancheId);
@@ -499,6 +535,7 @@ contract LendingPoolConfigurator is
      **/
     function setTranchePause(bool val, uint64 trancheId)
         external
+        payable
         onlyEmergencyAdmin
     {
         pool.setPause(val, trancheId);
@@ -510,6 +547,7 @@ contract LendingPoolConfigurator is
      **/
     function setEveryTranchePause(bool val)
         external
+        payable
         onlyEmergencyAdmin
     {
         pool.setPauseEverything(val);
@@ -533,9 +571,10 @@ contract LendingPoolConfigurator is
         availableLiquidity += IAToken(reserveData.aTokenAddress).getStakedAmount();
 
         require(
-            availableLiquidity == 0 && reserveData.currentLiquidityRate == 0,
+            availableLiquidity == 0  ,
             Errors.LPC_RESERVE_LIQUIDITY_NOT_0
         );
+        require(reserveData.currentLiquidityRate == 0, Errors.LPC_RESERVE_LIQUIDITY_NOT_0);  //Gas savings.
     }
 
     /**

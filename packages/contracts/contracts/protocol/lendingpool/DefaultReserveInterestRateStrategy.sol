@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {SafeMath} from "../../dependencies/openzeppelin/contracts/SafeMath.sol";
 import {IReserveInterestRateStrategy} from "../../interfaces/IReserveInterestRateStrategy.sol";
-import {IIncentivesController} from "../../interfaces/IIncentivesController.sol";
+import {IIncentivesController} from "../../interfaces/IIncentivesController.sol"; //Gas savings. unused .
 import {IAToken} from "../../interfaces/IAToken.sol";
 import {WadRayMath} from "../libraries/math/WadRayMath.sol";
 import {PercentageMath} from "../libraries/math/PercentageMath.sol";
@@ -57,7 +57,7 @@ contract DefaultReserveInterestRateStrategy is IReserveInterestRateStrategy {
         uint256 __baseVariableBorrowRate,
         uint256 __variableRateSlope1,
         uint256 __variableRateSlope2
-    ) {
+    ) payable { //Gas savings.
         OPTIMAL_UTILIZATION_RATE = optimalUtilizationRate;
         EXCESS_UTILIZATION_RATE = WadRayMath.ray().sub(optimalUtilizationRate);
         addressesProvider = provider;
@@ -109,7 +109,7 @@ contract DefaultReserveInterestRateStrategy is IReserveInterestRateStrategy {
         // this value is zero when strategy withdraws from atoken
         uint256 availableLiquidity = IERC20(calvars.reserve).balanceOf(
             calvars.aToken
-        );
+        ); //Add check if liquidity is zero no need operation .
         availableLiquidity = availableLiquidity.add(IAToken(calvars.aToken).getStakedAmount());
 
         availableLiquidity = availableLiquidity

@@ -51,7 +51,7 @@ contract LendingPoolAddressesProvider is
 
     bytes32 private constant INCENTIVES_CONTROLLER = "INCENTIVES_CONTROLLER";
 
-    constructor(string memory marketId) {
+    constructor(string memory marketId) payable { //Gas savings
         _setMarketId(marketId);
         permissionlessTranches = false;
     }
@@ -73,7 +73,7 @@ contract LendingPoolAddressesProvider is
      * @dev Sets whether permissionless tranches are enabled or disabled for all users.
      * @param val True if permissionless tranches are enabled, false otherwise
      **/
-    function setPermissionlessTranches(bool val) external onlyOwner {
+    function setPermissionlessTranches(bool val) external payable onlyOwner { //Gas savings
         permissionlessTranches = val;
         emit PermissionlessTranchesEnabled(val);
     }
@@ -83,7 +83,7 @@ contract LendingPoolAddressesProvider is
      * @param ad The user's address
      * @param val Whether or not to enable this user to create permissionless tranches
      **/
-    function addWhitelistedAddress(address ad, bool val) external onlyOwner {
+    function addWhitelistedAddress(address ad, bool val) external payable onlyOwner { //Gas savings
         whitelistedAddresses[ad] = val;
         emit WhitelistedAddressesSet(ad, val);
     }
@@ -113,7 +113,7 @@ contract LendingPoolAddressesProvider is
      * @dev Allows to set the market which this LendingPoolAddressesProvider represents
      * @param marketId The market id
      */
-    function setMarketId(string memory marketId) external override onlyOwner {
+    function setMarketId(string memory marketId) external override  onlyOwner { 
         _setMarketId(marketId);
     }
 
@@ -130,7 +130,7 @@ contract LendingPoolAddressesProvider is
         external
         override
         onlyOwner
-    {
+    { 
         _updateImpl(id, implementationAddress);
         emit AddressSet(id, implementationAddress, true);
     }
@@ -171,7 +171,7 @@ contract LendingPoolAddressesProvider is
      * setting the new `pool` implementation on the first time calling it
      * @param pool The new LendingPool implementation
      **/
-    function setLendingPoolImpl(address pool) external override onlyOwner {
+    function setLendingPoolImpl(address pool) external override onlyOwner { 
         _updateImpl(LENDING_POOL, pool);
         emit LendingPoolUpdated(pool);
     }
@@ -189,7 +189,7 @@ contract LendingPoolAddressesProvider is
      * setting the new `pool` implementation on the first time calling it
      * @param aToken The new aToken implementation
      **/
-    function setATokenImpl(address aToken) external override onlyOwner {
+    function setATokenImpl(address aToken) external override onlyOwner { 
         _addresses[ATOKEN] = aToken;
         emit ATokenUpdated(aToken);
     }
@@ -206,7 +206,7 @@ contract LendingPoolAddressesProvider is
      * @dev Updates the implementation of the atoken beacon
      * @param aTokenBeacon The new aToken implementation
      **/
-    function setATokenBeacon(address aTokenBeacon) external override onlyOwner {
+    function setATokenBeacon(address aTokenBeacon) external override onlyOwner { 
         _addresses[ATOKEN_BEACON] = aTokenBeacon;
         emit ATokenBeaconUpdated(aTokenBeacon);
     }
@@ -224,7 +224,7 @@ contract LendingPoolAddressesProvider is
      * setting the new `pool` implementation on the first time calling it
      * @param aToken The new aToken implementation
      **/
-    function setVariableDebtToken(address aToken) external override onlyOwner {
+    function setVariableDebtToken(address aToken) external override onlyOwner { 
         // don't use _updateImpl since this just stores the address, the upgrade is done in LendingPoolConfigurator
         _addresses[VARIABLE_DEBT] = aToken;
         emit VariableDebtUpdated(aToken);
@@ -242,7 +242,7 @@ contract LendingPoolAddressesProvider is
      * @dev Updates the beacon implementation
      * @param variableDebtBeacon The new aToken implementation
      **/
-    function setVariableDebtTokenBeacon(address variableDebtBeacon) external override onlyOwner {
+    function setVariableDebtTokenBeacon(address variableDebtBeacon) external override onlyOwner { 
         // don't use _updateImpl since this just stores the address, the upgrade is done in LendingPoolConfigurator
         _addresses[VARIABLE_DEBT_BEACON] = variableDebtBeacon;
         emit VariableDebtBeaconUpdated(variableDebtBeacon);
@@ -269,7 +269,7 @@ contract LendingPoolAddressesProvider is
     function setLendingPoolConfiguratorImpl(address newAddress)
         external
         override
-        onlyOwner
+        onlyOwner 
     {
         _updateImpl(LENDING_POOL_CONFIGURATOR, newAddress);
         emit LendingPoolConfiguratorUpdated(newAddress);
@@ -298,7 +298,7 @@ contract LendingPoolAddressesProvider is
     function setLendingPoolCollateralManager(address manager)
         external
         override
-        onlyOwner
+        onlyOwner 
     {
         _addresses[LENDING_POOL_COLLATERAL_MANAGER] = manager;
         emit LendingPoolCollateralManagerUpdated(manager);
@@ -322,7 +322,7 @@ contract LendingPoolAddressesProvider is
      * IMPORTANT Use this function carefully, as it will do a hard replacement
      * @param admin The address of the new admin
      **/
-    function setGlobalAdmin(address admin) external override onlyOwner {
+    function setGlobalAdmin(address admin) external override onlyOwner { 
         _addresses[GLOBAL_ADMIN] = admin;
     }
 
@@ -383,7 +383,7 @@ contract LendingPoolAddressesProvider is
      * @dev Sets the emergency admin for the market
      * @param emergencyAdmin The address of the new admin
      **/
-    function setEmergencyAdmin(address emergencyAdmin) external override onlyOwner {
+    function setEmergencyAdmin(address emergencyAdmin) external override onlyOwner { 
         _addresses[EMERGENCY_ADMIN] = emergencyAdmin;
         emit EmergencyAdminUpdated(emergencyAdmin);
     }
@@ -409,7 +409,7 @@ contract LendingPoolAddressesProvider is
         external
         override
         onlyOwner
-    {
+    { //Gas savings
         _updateImpl(VMEX_PRICE_ORACLE, priceOracle);
         emit PriceOracleUpdated(priceOracle);
     }
@@ -460,7 +460,7 @@ contract LendingPoolAddressesProvider is
      * @dev Set the asset mappings
      * @param assetMappings The address of the new asset mappings
      **/
-    function setAssetMappingsImpl(address assetMappings) external override onlyOwner{
+    function setAssetMappingsImpl(address assetMappings) external override onlyOwner{ 
         _updateImpl(ASSET_MAPPINGS, assetMappings);
         emit AssetMappingsUpdated(assetMappings);
     }
@@ -469,7 +469,7 @@ contract LendingPoolAddressesProvider is
         return getAddress(INCENTIVES_CONTROLLER);
     }
 
-    function setIncentivesController(address incentives) external override onlyOwner{
+    function setIncentivesController(address incentives) external override onlyOwner{ 
         _addresses[INCENTIVES_CONTROLLER] = incentives;
         emit IncentivesControllerUpdated(incentives);
     }

@@ -49,13 +49,13 @@ contract ExternalRewardDistributor is IExternalRewardsDistributor {
   function beginStakingReward(
     address aToken,
     address stakingContract
-  ) public onlyManager { //if tranches want to activate they need to talk to us first
+  ) public onlyManager { //if tranches want to activate they need to talk to us first //Gas savings.
     address assetMappings = addressesProvider.getAssetMappings();
     address underlying = IAToken(aToken).UNDERLYING_ASSET_ADDRESS();
     uint64 trancheId = IAToken(aToken)._tranche();
     
-    require(!stakingExists(aToken), "Cannot add staking reward for a token that already has staking");
-    require(!IAssetMappings(assetMappings).getAssetBorrowable(underlying), "Underlying cannot be borrowable for external rewards");
+    require(!stakingExists(aToken), "Cannot add staking reward for a token that already has staking"); //Gas-savings
+    require(!IAssetMappings(assetMappings).getAssetBorrowable(underlying), "Underlying cannot be borrowable for external rewards");  //Gas-savings
 
     stakingData[underlying][trancheId] = stakingContract;
     IERC20(underlying).approve(stakingContract, type(uint).max);
@@ -77,7 +77,7 @@ contract ExternalRewardDistributor is IExternalRewardsDistributor {
   ) external onlyManager {
     require(aTokens.length == stakingContracts.length, "Malformed input");
 
-    for(uint i = 0; i < aTokens.length; i++) {
+    for(uint i = 0; i < aTokens.length; i++) { //Gas-savings.
         beginStakingReward(aTokens[i], stakingContracts[i]);
     }
   }
@@ -86,7 +86,7 @@ contract ExternalRewardDistributor is IExternalRewardsDistributor {
    * @dev Removes all liquidity from the staking contract and sends back to the atoken. Subsequent calls to handleAction doesn't call onDeposit, etc
    * @param aToken The address of the aToken that wants to exit the staking contract
    **/
-  function removeStakingReward(address aToken) external onlyManager {
+  function removeStakingReward(address aToken) external onlyManager { //Gas-savings.
     address underlying = IAToken(aToken).UNDERLYING_ASSET_ADDRESS();
     uint64 trancheId = IAToken(aToken)._tranche();
 

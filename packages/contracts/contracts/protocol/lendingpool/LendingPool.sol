@@ -134,7 +134,7 @@ contract LendingPool is
         override
         whenTrancheNotPausedAndExists(trancheId)
     {
-        checkWhitelistBlacklist(trancheId, onBehalfOf);
+        checkWhitelistBlacklist(trancheId, onBehalfOf); //Check whitelist or black list 
         DataTypes.DepositVars memory vars = DataTypes.DepositVars(
                 asset,
                 trancheId,
@@ -170,7 +170,7 @@ contract LendingPool is
      * @param to Address that will receive the underlying, same as msg.sender if the user
      *   wants to receive it on his own wallet, or a different address if the beneficiary is a
      *   different wallet
-     * @return The final amount withdrawn
+     * @return actualAmount The final amount withdrawn
      **/
     function withdraw(
         address asset,
@@ -181,11 +181,11 @@ contract LendingPool is
         external
         override
         whenTrancheNotPausedAndExists(trancheId)
-        returns (uint256)
+        returns (uint256 actualAmount)  //Gas savings 
     {
         // note: no check whitelist and blacklist here, cause if users are blacklisted or taken out of whitelist
         // after tranche creation, they should be able to withdraw their funds
-        uint256 actualAmount = DepositWithdrawLogic._withdraw(
+         actualAmount = DepositWithdrawLogic._withdraw(  //Gas savings changed here
                 _reserves,
                 _usersConfig[msg.sender][trancheId].configuration,
                 _reservesList[trancheId],
@@ -257,8 +257,8 @@ contract LendingPool is
 
 
         uint256 actualAmount = DepositWithdrawLogic._borrowHelper(
-            _reserves,
-            _reservesList[trancheId],
+            _reserves,  //Reserve of Borrowing tranche
+            _reservesList[trancheId], // Address of reserve
             userConfig,
             _addressesProvider,
             vars
@@ -285,14 +285,14 @@ contract LendingPool is
      * @param onBehalfOf Address of the user who will get his debt reduced/removed. Should be the address of the
      * user calling the function if he wants to reduce/remove his own debt, or the address of any other
      * other borrower whose debt should be removed
-     * @return The final amount repaid
+     * @return paybackAmount The final amount repaid
      **/
     function repay(
         address asset,
         uint64 trancheId,
         uint256 amount,
         address onBehalfOf
-    ) external override whenTrancheNotPausedAndExists(trancheId) returns (uint256) {
+    ) external override whenTrancheNotPausedAndExists(trancheId) returns (uint256 paybackAmount ) { //Gas savings
         // note: no check whitelist and blacklist here, cause if users are blacklisted or taken out of whitelist
         // after tranche creation, they should be able to repay their loans
         DataTypes.ReserveData storage reserve = _reserves[asset][trancheId];
@@ -302,7 +302,7 @@ contract LendingPool is
             reserve
         );
 
-        uint256 paybackAmount = variableDebt;
+         paybackAmount = variableDebt;
 
         if (amount < paybackAmount) {
             paybackAmount = amount;
@@ -570,12 +570,12 @@ contract LendingPool is
         external
         view
         override
-        returns (address[] memory)
+        returns (address[] memory _activeReserves) // Gas savings 
     {
         uint8 reservesCount = trancheParams[trancheId].reservesCount;
-        address[] memory _activeReserves = new address[](reservesCount);
+        _activeReserves = new address[](reservesCount); 
 
-        for (uint256 i = 0; i < reservesCount; i++) {
+        for (uint256 i = 0; i < reservesCount; ++i) { // Gas savings .
             _activeReserves[i] = _reservesList[trancheId][i];
         }
         return _activeReserves;
@@ -642,7 +642,8 @@ contract LendingPool is
                 emit ReserveUsedAsCollateralDisabled(asset, trancheId, from);
             }
 
-            if (balanceToBefore == 0 && amount != 0) {
+            if (balanceToBefore == 0 ) { //Gas savings
+                if(amount != 0){ //Gas savings
                 DataTypes.UserConfigurationMap storage toConfig = _usersConfig[
                     to
                 ][trancheId].configuration;
@@ -652,6 +653,7 @@ contract LendingPool is
                         .getCollateralEnabled(asset, _assetMappings)
                 );
                 emit ReserveUsedAsCollateralEnabled(asset, trancheId, to);
+                }
             }
         }
     }
@@ -800,8 +802,10 @@ contract LendingPool is
         bool isWhitelisted
     ) external override onlyLendingPoolConfigurator {
         // adding a user to the whitelist enables the whitelist
-        if(isWhitelisted && !trancheParams[trancheId].isUsingWhitelist) {
-            trancheParams[trancheId].isUsingWhitelist = true;
+        if(isWhitelisted) {                                          //Gas savings
+            if(!trancheParams[trancheId].isUsingWhitelist){         //Gas savings
+             trancheParams[trancheId].isUsingWhitelist = true;
+            }
         }
 
         _usersConfig[user][trancheId].configuration.setWhitelist(isWhitelisted);

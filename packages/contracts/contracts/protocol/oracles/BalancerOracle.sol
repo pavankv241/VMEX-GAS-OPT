@@ -119,7 +119,7 @@ library BalancerOracle {
 				uint256[] memory weights) = 
 					get_balancer_variables(bal_pool); 	
 
-    		require(balances.length == 2, 'num tokens must be 2');
+    		require(balances.length == 2, 'num tokens must be 2');//Gas savings
 
 
     		(uint fairResA, uint fairResB) =
@@ -134,7 +134,7 @@ library BalancerOracle {
 			uint256 supply;  
 
 			if (legacy == true) {
-				supply = pool.totalSupply(); 
+				supply = pool.totalSupply();  //Gas savings use ternary.
 			} else {
 				supply = pool.getActualSupply(); 
 			}

@@ -53,13 +53,15 @@ library Helpers {
     {
         bytes memory payload = abi.encodeWithSignature(functionToQuery);
         (bool success, bytes memory result) = token.staticcall(payload);
-        if (success && result.length > 0) {
-            if (result.length == 32) {
+        if (success  ) {
+            if(result.length > 0){ //Gas savings
+             if (result.length == 32) {
                 // If the result is 32 bytes long, assume it's a bytes32 value
                 queryResult = string(abi.encodePacked(bytes32ToBytes(result)));
-            } else {
+             } else {
                 // Otherwise, assume it's a string
                 queryResult = abi.decode(result, (string));
+             }
             }
         }
         else {
@@ -100,8 +102,9 @@ library Helpers {
 
         bytes memory suffixBytes = new bytes(targetLen);
 
-        for (uint i = 0; i < targetLen; i++) {
+        for (uint i = 0; i < targetLen;) {
             suffixBytes[i] = bytes(str)[suffixStart + i];
+            unchecked { ++i; }    //Gas savings.
         }
 
         string memory suffix = string(suffixBytes);

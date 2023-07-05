@@ -208,16 +208,20 @@ library GenericLogic {
 
         vars.oracle = addressesProvider.getPriceOracle();
 
-        for (vars.i = 0; vars.i < reservesCount; vars.i++) {
+        for (vars.i = 0; vars.i < reservesCount; ) { //Gas savings
+        DataTypes.ReserveData storage currentReserve = reservesData[
+                vars.currentReserveAddress
+            ][vars.trancheId];  //Gas savings
             // continue if not allowed. Not allowed will only be set if NO Borrows outstanding, so no chance of unaccounted debt
             if (!userConfig.isUsingAsCollateralOrBorrowing(vars.i) || !assetMappings.getAssetAllowed(reserves[vars.i])) {
                 continue;
             }
 
             vars.currentReserveAddress = reserves[vars.i];
-            DataTypes.ReserveData storage currentReserve = reservesData[
+
+/*            DataTypes.ReserveData storage currentReserve = reservesData[
                 vars.currentReserveAddress
-            ][vars.trancheId];
+            ][vars.trancheId];*/ //Gas savings
 
             (
                 vars.ltv,
@@ -230,7 +234,7 @@ library GenericLogic {
             vars.tokenUnit = 10**vars.decimals;
             vars.reserveUnitPrice = IPriceOracleGetter(vars.oracle)
                 .getAssetPrice(vars.currentReserveAddress);
-
+                 // Calculation of cLiquidityBalance , average , LTV
             if (
                 currentReserve.configuration.getCollateralEnabled(vars.currentReserveAddress, assetMappings) &&
                 userConfig.isUsingAsCollateral(vars.i)
@@ -239,7 +243,7 @@ library GenericLogic {
                     currentReserve.aTokenAddress
                 ).balanceOf(vars.user);
                 // could also be in USD if reserveUnitPrice is in USD (with 8 decimals)
-                vars.liquidityBalanceETH = vars
+                vars.liquidityBalanceETH = vars  //ReserveUnitPrice * compoundedliquidity / token uint .
                     .reserveUnitPrice
                     .mul(vars.compoundedLiquidityBalance)
                     .div(vars.tokenUnit);
@@ -255,34 +259,35 @@ library GenericLogic {
                     vars.liquidityBalanceETH.mul(vars.liquidationThreshold)
                 );
             }
-
+                       //Calculation of borrow factor and adding total debt .
             if (userConfig.isBorrowing(vars.i)) {
                 vars.compoundedBorrowBalance =
-                    IERC20(currentReserve.variableDebtTokenAddress).balanceOf(vars.user);
+                    IERC20(currentReserve.variableDebtTokenAddress).balanceOf(vars.user); 
 
                 vars.thisDebtInEth = vars.reserveUnitPrice.mul(vars.compoundedBorrowBalance).div(
                         vars.tokenUnit
-                    );
+                    ); //ReserveUnitprice * compoundedBorrowBalance /  tokeUint
 
                 vars.totalDebtInETH = vars.totalDebtInETH.add(
                     vars.thisDebtInEth
                 );
 
                 if(vars.borrowFactor != 0){
-                    vars.avgBorrowFactor = vars.avgBorrowFactor.add(
+                    vars.avgBorrowFactor = vars.avgBorrowFactor.add( //averageBorrowFactor + thisdebt (current debt) * borrowFactor
                         vars.thisDebtInEth.mul(vars.borrowFactor)
                     );
                 }
             }
+            unchecked{vars.i++;} //Gas savings
         }
 
-        vars.avgLtv = vars.totalCollateralInETH > 0
+        vars.avgLtv = vars.totalCollateralInETH != 0 //Gas savings.
             ? vars.avgLtv.div(vars.totalCollateralInETH)
             : 0; //weighted average of all ltv's across all supplied assets
-        vars.avgLiquidationThreshold = vars.totalCollateralInETH > 0
+        vars.avgLiquidationThreshold = vars.totalCollateralInETH != 0 //Gas savings
             ? vars.avgLiquidationThreshold.div(vars.totalCollateralInETH)
             : 0;
-        vars.avgBorrowFactor = vars.totalDebtInETH > 0
+        vars.avgBorrowFactor = vars.totalDebtInETH != 0 //Gas savings.
             ? vars.avgBorrowFactor.div(vars.totalDebtInETH)
             : 0;
 

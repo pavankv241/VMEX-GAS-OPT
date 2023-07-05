@@ -10,9 +10,13 @@ library vMath {
 	
 	function min(uint256[] memory array) internal pure returns(uint256) {
 		uint256 _min = array[0]; 
-		for (uint8 i = 1; i < array.length; i++) {
+		uint arrayLength = array.length;  //Gas savings
+		for (uint8 i = 1; i < arrayLength;) { //Gas savings
 			if (_min > array[i]) {
 				_min = array[i]; 
+			}
+			unchecked {  //Gas savings.
+				++i;
 			}	
 		}
 		return _min; 
@@ -21,10 +25,13 @@ library vMath {
 	function weightedAvg(uint256[] memory prices, uint256[] memory balances, uint8[] memory decimals) internal pure returns(uint256) {
 		uint256 cumSum = 0;
 		uint256 cumBalances = 0;
-
-		for(uint i = 0;i<prices.length;i++) {
+		uint pricesLength = prices.length; //Gas savings.
+		for(uint i = 0;i<pricesLength;) {
 			cumSum += prices[i]*balances[i]/10**decimals[i]; //18 decimals
 			cumBalances += balances[i]*1e18/10**decimals[i]; //18 decimals
+			unchecked {  //Gas savings.
+				++i;
+			}	
 		}
 
 		return cumSum * 1e18 / cumBalances; //18 decimals
@@ -32,8 +39,12 @@ library vMath {
 
 	function product(uint256[] memory nums) internal pure returns(uint256) {
 		uint256 _product = nums[0]; 
-		for (uint256 i = 1; i < nums.length; i++) {
+		uint numsLength = nums.length; //Gas savings
+		for (uint256 i = 1; i < numsLength;) {
 			_product *= nums[i]; 
+			unchecked {  //Gas savings.
+				++i;
+			}	
 		}
 		return _product; 
 	}

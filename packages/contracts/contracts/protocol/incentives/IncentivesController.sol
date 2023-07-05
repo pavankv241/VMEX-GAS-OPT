@@ -6,8 +6,8 @@ import {SafeMath} from "../../dependencies/openzeppelin/contracts/SafeMath.sol";
 import {DistributionTypes} from '../libraries/types/DistributionTypes.sol';
 import {IDistributionManager} from '../../interfaces/IDistributionManager.sol';
 import {IAToken} from '../../interfaces/IAToken.sol';
-import {IERC20} from "../../dependencies/openzeppelin/contracts/IERC20.sol";
-import {SafeERC20} from "../../dependencies/openzeppelin/contracts/SafeERC20.sol";
+import {IERC20} from "../../dependencies/openzeppelin/contracts/IERC20.sol";  
+ //import {SafeERC20} from "../../dependencies/openzeppelin/contracts/SafeERC20.sol"; //Gas savings . 2 times import.
 import {IIncentivesController} from '../../interfaces/IIncentivesController.sol';
 import {VersionedInitializable} from "../../dependencies/aave-upgradeability/VersionedInitializable.sol";
 import {DistributionManager} from './DistributionManager.sol';
@@ -93,12 +93,12 @@ contract IncentivesController is
   function _getUserState(
     address[] memory assets,
     address user
-  ) internal view returns (DistributionTypes.UserAssetState[] memory) {
-    DistributionTypes.UserAssetState[] memory userState = new DistributionTypes.UserAssetState[](
-      assets.length
+  ) internal view returns (DistributionTypes.UserAssetState[] memory userState ) { //Gas savings
+    /*DistributionTypes.UserAssetState[] memory*/ userState = new DistributionTypes.UserAssetState[]( //Gas changed here
+      assets.length 
     );
 
-    for (uint256 i = 0; i < assets.length; i++) {
+    for (uint256 i = 0; i < assets.length; ++i) { //Gas savings
       userState[i].asset = assets[i];
       (userState[i].userBalance, userState[i].totalSupply) = IAToken(assets[i])
         .getScaledUserBalanceAndSupply(user);
@@ -115,14 +115,14 @@ contract IncentivesController is
   function getPendingRewards(
     address[] calldata assets,
     address user
-  ) external view override returns (address[] memory, uint256[] memory) {
-    address[] memory rewards = _allRewards;
-    uint256[] memory amounts = new uint256[](_allRewards.length);
+  ) external view override returns (address[] memory, uint256[] memory) { //Gas savings
+    address[] memory rewards = _allRewards; //Gas savings
+    uint256[] memory amounts = new uint256[](_allRewards.length); //Gas savings
     DistributionTypes.UserAssetState[] memory balanceData = _getUserState(assets, user);
 
-    for (uint256 i = 0; i < assets.length; i++) {
+    for (uint256 i = 0; i < assets.length; ++i) { //Gas savings 
       address asset = assets[i];
-      for (uint256 j = 0; j < _allRewards.length; j++) {
+      for (uint256 j = 0; j < _allRewards.length; ++j) { //Gas savings 
         DistributionTypes.Reward storage reward = _incentivizedAssets[asset].rewardData[
           _allRewards[j]
         ];
@@ -147,14 +147,14 @@ contract IncentivesController is
    * @param reward The reward to claim (only claims this reward address across all atokens you enter)
    * @param amountToClaim The amount of the reward to claim
    * @param to The address to send the claimed funds to
-   * @return rewardAccured The total amount of rewards claimed by the user
+   * @return rewardAccrued  The total amount of rewards claimed by the user
    **/
   function claimReward(
     address[] calldata incentivizedAssets,
     address reward,
     uint256 amountToClaim,
     address to
-  ) external override returns (uint256) {
+  ) external override returns (uint256 ) { //Gas savings.
     if (amountToClaim == 0) {
       return 0;
     }
@@ -164,7 +164,7 @@ contract IncentivesController is
     _batchUpdate(user, userState);
 
     uint256 rewardAccrued;
-    for (uint256 i = 0; i < incentivizedAssets.length; i++) {
+    for (uint256 i = 0; i < incentivizedAssets.length; i++) { //Gas savings.
       address asset = incentivizedAssets[i];
 
       if (_incentivizedAssets[asset].rewardData[reward].users[user].accrued == 0) {
@@ -188,7 +188,7 @@ contract IncentivesController is
     }
 
     IERC20(reward).safeTransferFrom(REWARDS_VAULT, to, rewardAccrued);
-    emit RewardClaimed(msg.sender, reward, to, rewardAccrued);
+    emit RewardClaimed(msg.sender, reward, to, rewardAccrued); 
 
     return rewardAccrued;
   }
@@ -203,14 +203,17 @@ contract IncentivesController is
   function claimAllRewards(
     address[] calldata incentivizedAssets,
     address to
-  ) external override returns (address[] memory, uint256[] memory) {
-    address[] memory rewards = _allRewards;
-    uint256[] memory amounts = new uint256[](_allRewards.length);
-    address user = msg.sender;
+  ) external override returns (address[] memory rewards, uint256[] memory amounts) { // Gas savings
+     rewards = _allRewards;
+     amounts  = new uint256[](_allRewards.length);
 
-    for (uint256 i = 0; i < incentivizedAssets.length; i++) {
+
+    address user = msg.sender;
+    uint Length_allAssets = _allRewards.length; //Added here
+
+    for (uint256 i = 0; i < incentivizedAssets.length; ++i) { //Gas savings
       address asset = incentivizedAssets[i];
-      for (uint256 j = 0; j < _allRewards.length; j++) {
+      for (uint256 j = 0; j < Length_allAssets; ++j) { //Gas savings  //Changed here
         uint256 amount = _incentivizedAssets[asset].rewardData[rewards[j]].users[user].accrued;
         if (amount != 0) {
           amounts[j] += amount;
@@ -219,7 +222,7 @@ contract IncentivesController is
       }
     }
 
-    for (uint256 i = 0; i < amounts.length; i++) {
+    for (uint256 i = 0; i < amounts.length; ++i) { //Gas savings.
       if (amounts[i] != 0) {
         IERC20(rewards[i]).safeTransferFrom(REWARDS_VAULT, to, amounts[i]);
         emit RewardClaimed(msg.sender, rewards[i], to, amounts[i]);

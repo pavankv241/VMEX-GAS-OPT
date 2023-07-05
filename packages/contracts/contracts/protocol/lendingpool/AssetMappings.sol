@@ -65,7 +65,7 @@ contract AssetMappings is IAssetMappings, VersionedInitializable{
         ).totalTranches();
 
         ILendingPool lendingPool = ILendingPool(addressesProvider.getLendingPool());
-        for (uint64 tranche = 0; tranche < totalTranches; tranche++) {
+        for (uint64 tranche = 0; tranche < totalTranches; ++tranche) {
             DataTypes.ReserveData memory reserve = lendingPool.getReserveData(asset, tranche);
             //no outstanding borrows allowed
             if (reserve.variableDebtTokenAddress != address(0)) {
@@ -199,8 +199,9 @@ contract AssetMappings is IAssetMappings, VersionedInitializable{
      **/
     function addAssetMapping(
         AddAssetMappingInput[] memory input
-    ) external onlyGlobalAdmin {
-        for(uint256 i = 0; i<input.length; i++) {
+    )  external  onlyGlobalAdmin {
+        uint Length_input = input.length; //Gas savings.
+        for(uint256 i = 0; i<Length_input; ++i) { //Gas savings
             AddAssetMappingInput memory inputAsset = input[i];
             address currentAssetAddress = inputAsset.asset;
             validateAddAssetMapping(inputAsset);
@@ -269,7 +270,7 @@ contract AssetMappings is IAssetMappings, VersionedInitializable{
         uint128 supplyCap, //1 word, 32 bytes -> 1 word
         uint128 borrowCap, //2 words, 16 bytes
         uint64 borrowFactor //2 words, 24 bytes --> 3 words total
-    ) external onlyGlobalAdmin {
+    ) external  onlyGlobalAdmin {
         require(isAssetInMappings(asset), Errors.AM_ASSET_DOESNT_EXIST);
         baseLTV = uint256(baseLTV).convertToPercent().toUint64();
         liquidationThreshold = uint256(liquidationThreshold).convertToPercent().toUint64();
@@ -312,14 +313,14 @@ contract AssetMappings is IAssetMappings, VersionedInitializable{
     /**
      * @dev Gets the number of allowed assets in the linked list
      **/
-    function getNumApprovedTokens() view public returns (uint256) {
-        uint256 numTokens = 0;
+    function getNumApprovedTokens() view public returns (uint256 numTokens) { //Gas savings
+        numTokens = 0;
         address tmp = approvedAssetsHead;
 
         while(tmp != address(0)) {
             if(assetMappings[tmp].isAllowed){
                 // don't count disallowed tokens
-                numTokens++;
+                ++numTokens; //Gas savings
             }
 
             tmp = assetMappings[tmp].nextApprovedAsset;
@@ -344,7 +345,7 @@ contract AssetMappings is IAssetMappings, VersionedInitializable{
         while(tmp != address(0)) {
             if(assetMappings[tmp].isAllowed) {
                 tokens[i] = tmp;
-                i++;
+                ++i; //Gas savings
             }
 
             tmp = assetMappings[tmp].nextApprovedAsset;
@@ -403,7 +404,7 @@ contract AssetMappings is IAssetMappings, VersionedInitializable{
     function addInterestRateStrategyAddress(address asset, address strategy) external onlyGlobalAdmin {
         require(Address.isContract(strategy), Errors.AM_INTEREST_STRATEGY_NOT_CONTRACT);
         while(interestRateStrategyAddress[asset][numInterestRateStrategyAddress[asset]]!=address(0)){
-            numInterestRateStrategyAddress[asset]++;
+            ++numInterestRateStrategyAddress[asset]; //Gas savings
         }
         interestRateStrategyAddress[asset][numInterestRateStrategyAddress[asset]] = strategy;
         emit AddedInterestRateStrategyAddress(
@@ -425,8 +426,17 @@ contract AssetMappings is IAssetMappings, VersionedInitializable{
      **/
     function setCurveMetadata(address[] calldata assets, DataTypes.CurveMetadata[] calldata vars) external override onlyGlobalAdmin {
         require(assets.length == vars.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for(uint i = 0;i<assets.length;i++){
+       /* for(uint i = 0;i<assets.length;++i){  //Gas savings
             curveMetadata[assets[i]] = vars[i];
+        }*/
+
+        if(assets.length != 0){
+            uint i;
+                do{
+                  curveMetadata[assets[i]] = vars[i];   //gas  Changed here
+                  ++i;
+                }
+            while(i < assets.length );
         }
     }
 
@@ -439,8 +449,20 @@ contract AssetMappings is IAssetMappings, VersionedInitializable{
      **/
     function setBeethovenMetadata(address[] calldata assets, DataTypes.BeethovenMetadata[] calldata vars) external onlyGlobalAdmin {
         require(assets.length == vars.length, Errors.ARRAY_LENGTH_MISMATCH);
-        for(uint i = 0;i<assets.length;i++){
+       /* for(uint i = 0;i<assets.length;++i){ //Gas savings
             beethovenMetadata[assets[i]] = vars[i];
+        }*/
+        if(assets.length != 0){
+          uint i;
+
+            do{
+             beethovenMetadata[assets[i]] = vars[i];     //Gas changed here
+             ++i; 
+
+            }
+        while(i < assets.length);
+
+
         }
     }
 

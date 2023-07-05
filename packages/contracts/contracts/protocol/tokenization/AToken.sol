@@ -75,9 +75,10 @@ contract AToken is
 
     function approveIncentivesController() internal {
         address incentivesController = address(_getIncentivesController());
-        if (incentivesController != address(0) &&
-            IERC20(_underlyingAsset).allowance(address(this), incentivesController) == 0) {
+        if (incentivesController != address(0)) {   //Gas savings..
+            if(IERC20(_underlyingAsset).allowance(address(this), incentivesController) == 0){
                 IERC20(_underlyingAsset).approve(incentivesController, type(uint).max);
+            }
         }
     }
 
@@ -157,7 +158,7 @@ contract AToken is
         address receiverOfUnderlying,
         uint256 amount,
         uint256 index
-    ) external override onlyLendingPool {
+    ) external override onlyLendingPool { 
         uint256 amountScaled = amount.rayDiv(index);
         require(amountScaled != 0, Errors.CT_INVALID_BURN_AMOUNT);
         _burn(user, amountScaled);
@@ -180,7 +181,7 @@ contract AToken is
         address user,
         uint256 amount,
         uint256 index
-    ) external override onlyLendingPool returns (bool) {
+    ) external override onlyLendingPool returns (bool) { 
         approveIncentivesController();
 
         uint256 previousBalance = super.balanceOf(user);
@@ -333,7 +334,7 @@ contract AToken is
         uint256 currentSupplyScaled = super.totalSupply();
 
         if (currentSupplyScaled == 0) {
-            return 0;
+            return 0; 
         }
 
         return

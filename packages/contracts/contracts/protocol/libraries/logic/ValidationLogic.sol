@@ -151,7 +151,7 @@ library ValidationLogic {
     }
 
     function validateBorrow(
-        DataTypes.ExecuteBorrowParams memory exvars,
+        DataTypes.ExecuteBorrowParams memory exvars, //Executive boorow
         DataTypes.ReserveData storage reserve,
         mapping(address => mapping(uint64 => DataTypes.ReserveData))
             storage reservesData,
@@ -206,7 +206,7 @@ library ValidationLogic {
         //(uint256(14), uint256(14), uint256(14), uint256(14), uint256(14));
 
         require(
-            vars.userCollateralBalanceETH > 0,
+            vars.userCollateralBalanceETH != 0, //Gas savings
             Errors.VL_COLLATERAL_BALANCE_IS_0
         );
 
@@ -218,6 +218,7 @@ library ValidationLogic {
 
         //add the current already borrowed amount to the amount requested to calculate the total collateral needed.
         //risk adjusted debt
+        //UserBorrow balanceEth 
         vars.amountOfCollateralNeededETH = vars
             .userBorrowBalanceETH
             .percentMul(vars.avgBorrowFactor)
@@ -251,9 +252,9 @@ library ValidationLogic {
 
         require(isActive, Errors.VL_NO_ACTIVE_RESERVE);
 
-        require(amountSent > 0, Errors.VL_INVALID_AMOUNT);
+        require(amountSent != 0, Errors.VL_INVALID_AMOUNT); //Gas savings
 
-        require(variableDebt > 0, Errors.VL_NO_DEBT_OF_SELECTED_TYPE);
+        require(variableDebt != 0, Errors.VL_NO_DEBT_OF_SELECTED_TYPE); //Gas savings.
 
         require(
             amountSent != type(uint256).max || msg.sender == onBehalfOf,
@@ -290,7 +291,7 @@ library ValidationLogic {
         );
 
         require(
-            underlyingBalance > 0,
+            underlyingBalance != 0, //Gas savings.
             Errors.VL_UNDERLYING_BALANCE_NOT_GREATER_THAN_0
         );
 

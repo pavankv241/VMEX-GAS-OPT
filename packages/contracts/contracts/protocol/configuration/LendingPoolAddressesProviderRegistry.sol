@@ -24,21 +24,21 @@ contract LendingPoolAddressesProviderRegistry is
 
     /**
      * @dev Returns the list of registered addresses provider
-     * @return The list of addresses provider, potentially containing address(0) elements
+     * @return activeProviders The list of addresses provider, potentially containing address(0) elements //Chnaged here
      **/
     function getAddressesProvidersList()
         external
         view
         override
-        returns (address[] memory)
+        returns (address[] memory activeProviders) //Gas savings.
     {
-        address[] memory addressesProvidersList = _addressesProvidersList;
+        address[] memory addressesProvidersList = _addressesProvidersList; //Gas savings
 
         uint256 maxLength = addressesProvidersList.length;
 
-        address[] memory activeProviders = new address[](maxLength);
+         activeProviders = new address[](maxLength);
 
-        for (uint256 i = 0; i < maxLength; i++) {
+        for (uint256 i = 0; i < maxLength; ++i) { //Gas savings.
             if (_addressesProviders[addressesProvidersList[i]] > 0) {
                 activeProviders[i] = addressesProvidersList[i];
             }
@@ -56,7 +56,7 @@ contract LendingPoolAddressesProviderRegistry is
         external
         override
         onlyOwner
-    {
+    { //Gas savings .
         require(id != 0, Errors.LPAPR_INVALID_ADDRESSES_PROVIDER_ID);
         require(_addressesProviders[provider]==0, Errors.LPAPR_ALREADY_SET);
         _addressesProviders[provider] = id;
@@ -72,9 +72,9 @@ contract LendingPoolAddressesProviderRegistry is
         external
         override
         onlyOwner
-    {
+    { 
         require(
-            _addressesProviders[provider] > 0,
+            _addressesProviders[provider] != 0, //Gas savings
             Errors.LPAPR_PROVIDER_NOT_REGISTERED
         );
         _addressesProviders[provider] = 0;
@@ -97,7 +97,7 @@ contract LendingPoolAddressesProviderRegistry is
     function _addToAddressesProvidersList(address provider) internal {
         uint256 providersCount = _addressesProvidersList.length;
 
-        for (uint256 i = 0; i < providersCount; i++) {
+        for (uint256 i = 0; i < providersCount; ++i) { //Gas savings
             if (_addressesProvidersList[i] == provider) {
                 return;
             }
